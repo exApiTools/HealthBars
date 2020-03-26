@@ -84,7 +84,6 @@ namespace HealthBars
             }
         }
 
-        public int MaxHp { get; private set; }
         public float HpPercent { get; set; }
         public float Distance => _distance.Value;
         public Life Life => Entity.GetComponent<Life>();
@@ -161,7 +160,6 @@ namespace HealthBars
             }
 
             _lastHp = GetFullHp();
-            MaxHp = Life.MaxHP;
             _init = true;
         }
 
