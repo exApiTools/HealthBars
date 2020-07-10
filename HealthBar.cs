@@ -81,7 +81,7 @@ namespace HealthBars
             }
         }
 
-        public float HpPercent => Life?.HPPercentage ?? 100.0;
+        public float HpPercent => Life?.HPPercentage ?? 100;
         public float Distance => _distance.Value;
         public Life Life => Entity.GetComponent<Life>();
         public Entity Entity { get; }
