@@ -102,3 +102,6 @@ Metadata/Monsters/LeagueBestiary/ModDaemonStampede1
 Metadata/Monsters/LeagueBestiary/ModDaemonGraspingPincers1
 
 Metadata/Monsters/VolatileCore/VolatileDeadCore
+# Traps
+Metadata/Monsters/traps/MonsterFireTrap2
+Metadata/Monsters/traps/MonsterBlastRainTrap

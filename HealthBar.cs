@@ -9,18 +9,6 @@ using SharpDX;
 
 namespace HealthBars
 {
-    public class DebuffPanelConfig
-    {
-        public Dictionary<string, int> Bleeding { get; set; }
-        public Dictionary<string, int> Corruption { get; set; }
-        public Dictionary<string, int> Poisoned { get; set; }
-        public Dictionary<string, int> Frozen { get; set; }
-        public Dictionary<string, int> Chilled { get; set; }
-        public Dictionary<string, int> Burning { get; set; }
-        public Dictionary<string, int> Shocked { get; set; }
-        public Dictionary<string, int> WeakenedSlowed { get; set; }
-    }
-
     public class HealthBar
     {
         private const int DPS_CHECK_TIME = 1000;
@@ -41,14 +29,8 @@ namespace HealthBars
         public HealthBar(Entity entity, HealthBarsSettings settings)
         {
             Entity = entity;
-            _distance = new TimeCache<float>(() => entity.DistancePlayer, 200);
-
-            // If ignored entity found, skip
-            foreach (var _entity in IgnoreEntitiesList)
-            {
-                if (entity.Path.Contains(_entity))
-                    return;
-            }
+            _DistanceCache = new TimeCache<float>(() => entity.DistancePlayer, 200);
+            DebuffPanel = new DebuffPanel(entity);
 
             Update(entity, settings);
 
@@ -64,30 +46,18 @@ namespace HealthBars
                 };
             }
         }
-
-        public bool IsHostile
-        {
-            get
-            {
-                var entityIsHostile = Entity.IsHostile;
-
-                if (isHostile != entityIsHostile)
-                {
-                    isHostile = entityIsHostile;
-                    OnHostileChange?.Invoke();
-                }
-
-                return entityIsHostile;
-            }
-        }
-
-        public float HpPercent => Life?.HPPercentage ?? 100;
-        public float Distance => _distance.Value;
-        public Life Life => Entity.GetComponent<Life>();
-        public Entity Entity { get; }
+        public bool Skip { get; set; } = false;
         public UnitSettings Settings { get; private set; }
+        public RectangleF BackGround { get; set; }
+        public DebuffPanel DebuffPanel { get; set; }
+        private TimeCache<float> _DistanceCache { get; set; }
+        public float Distance => _DistanceCache.Value;
+        public Entity Entity { get; }
         public CreatureType Type { get; private set; }
-        public LinkedList<int> DpsQueue { get; } = new LinkedList<int>();
+        public Life Life => Entity.GetComponent<Life>();
+        public float HpPercent => Life?.HPPercentage ?? 100;
+        public float HpWidth { get; set; }
+        public float EsWidth { get; set; }
 
         public Color Color
         {
@@ -114,11 +84,6 @@ namespace HealthBars
                 return false;
             }
         }
-
-
-
-        public float HpWidth { get; set; }
-        public float EsWidth { get; set; }
 
         public void Update(Entity entity, HealthBarsSettings settings)
         {
