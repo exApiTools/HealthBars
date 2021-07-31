@@ -270,6 +270,7 @@ namespace HealthBars
 
             ShowPercents(bar);
             ShowNumbersInHealthbar(bar);
+            ShowDebuffPanel(bar);
             if (bar.Settings.ShowFloatingCombatDamage)
             {
                 ShowDps(bar, new Vector2(bar.BackGround.Center.X, bar.BackGround.Y));
@@ -344,6 +345,19 @@ namespace HealthBars
             Graphics.DrawText(FloatToPercentString(percents),
                 new Vector2(bar.BackGround.Right, bar.BackGround.Center.Y - Graphics.Font.Size / 2f),
                 bar.Settings.PercentTextColor);
+        }
+
+        private void ShowDebuffPanel(HealthBar bar)
+        {
+            if (!bar.Settings.ShowDebuffPanel) return;
+
+            Graphics.DrawText(bar.DebuffPanel.Bleed.Count.ToString(),
+                new Vector2(bar.BackGround.Left, bar.BackGround.Top - Graphics.Font.Size),
+                Color.Red);
+
+            Graphics.DrawText(bar.DebuffPanel.CorruptedBlood.Count.ToString(),
+                new Vector2(bar.BackGround.Left + 10, bar.BackGround.Top - Graphics.Font.Size),
+                Color.Red);
         }
 
         private string FloatToPercentString (float number)
