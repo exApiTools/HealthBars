@@ -58,7 +58,8 @@ namespace HealthBars
             //CanNotDie = entity.GetComponent<Stats>().StatDictionary.ContainsKey(GameStat.CannotDie);
             CanNotDie = entity.Path.StartsWith("Metadata/Monsters/Totems/Labyrinth");
 
-            if (entity.HasComponent<ObjectMagicProperties>() && entity.GetComponent<ObjectMagicProperties>().Mods.Contains("MonsterConvertsOnDeath_"))
+            var mods = entity?.GetComponent<ObjectMagicProperties>()?.Mods;
+            if (mods != null && mods.Contains("MonsterConvertsOnDeath_")) 
             {
                 OnHostileChange = () =>
                 {
