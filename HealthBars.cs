@@ -17,7 +17,6 @@ namespace HealthBars
     {
         private Camera camera;
         private bool CanTick = true;
-        private readonly List<Element> ElementForSkip = new List<Element>();
         private string IGNORE_FILE { get; } = Path.Combine("config", "ignored_entities.txt");
         private List<string> IgnoredEntities { get; set; }
 
@@ -131,14 +130,6 @@ namespace HealthBars
             {
                 healthBar.Skip = true;
                 return;
-            }
-
-            foreach (var forSkipBar in ElementForSkip)
-            {
-                if (forSkipBar.IsVisibleLocal && forSkipBar.GetClientRectCache.Intersects(healthBar.BackGround))
-                {
-                    healthBar.Skip = true;
-                }
             }
 
             healthBar.HpWidth = healthBar.HpPercent * scaledWidth;
