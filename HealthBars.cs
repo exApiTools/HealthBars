@@ -232,7 +232,7 @@ namespace HealthBars
                 worldCoords.Z += Settings.PlayerZ;
                 var result = camera.WorldToScreen(worldCoords);
 
-                if (Math.Abs(oldplayerCord.X - result.X) < 40 || Math.Abs(oldplayerCord.X - result.Y) < 40)
+                if (Math.Abs(oldplayerCord.X - result.X) < 40 && Math.Abs(oldplayerCord.Y - result.Y) < 40)
                     result = oldplayerCord;
                 else
                     oldplayerCord = result;
