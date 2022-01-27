@@ -37,17 +37,7 @@ namespace HealthBars
 
         public override bool Initialise()
         {
-            Player = GameController.Player;
             ingameUI = GameController.IngameState.IngameUi;
-            PlayerBar = new HealthBar(Player, Settings);
-
-            GameController.EntityListWrapper.PlayerUpdate += (sender, args) =>
-            {
-                Player = GameController.Player;
-
-                PlayerBar = new HealthBar(Player, Settings);
-            };
-
             ingameUICheckVisible = new TimeCache<bool>(() =>
             {
                 windowRectangle = GameController.Window.GetWindowRectangleReal();
@@ -79,6 +69,11 @@ namespace HealthBars
 
         public override void AreaChange(AreaInstance area)
         {
+            Player = GameController.Player;
+            if (Player != null)
+            {
+                PlayerBar = new HealthBar(Player, Settings);
+            }
             ingameUI = GameController.IngameState.IngameUi;
             ReadIgnoreFile();
         }
