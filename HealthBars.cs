@@ -79,7 +79,7 @@ namespace HealthBars
 
             ingameUICheckVisible = new TimeCache<bool>(() =>
             {
-                windowRectangle = GameController.Window.GetWindowRectangleReal();
+                windowRectangle = GameController.Window.GetWindowRectangleReal() with { Location = Vector2.Zero };
                 windowSize = new Size2F(windowRectangle.Width / 2560, windowRectangle.Height / 1600);
                 camera = GameController.Game.IngameState.Camera;
 
