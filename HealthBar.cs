@@ -6,182 +6,145 @@ using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Cache;
 using ExileCore.Shared.Enums;
 using SharpDX;
+using Vector2 = System.Numerics.Vector2;
 
-namespace HealthBars
+namespace HealthBars;
+
+public class HealthBar
 {
-    public class HealthBar
+    private readonly Stopwatch _dpsStopwatch = Stopwatch.StartNew();
+    private bool _isHostile;
+    private readonly CachedValue<float> _distanceCache;
+
+    public HealthBar(Entity entity, HealthBarsSettings settings)
     {
-        private const int DPS_CHECK_TIME = 1000;
-        private const int DPS_FAST_CHECK_TIME = 200;
-        private const int DPS_POP_TIME = 2000;
-        private static readonly List<string> IgnoreEntitiesList = new List<string> {"MonsterFireTrap2", "MonsterBlastRainTrap", "VolatileDeadCore"};
-        private readonly Stopwatch dpsStopwatch = Stopwatch.StartNew();
-        private readonly TimeCache<float> _distance;
-        private bool _init;
-        private int _lastHp;
-        public RectangleF BackGround;
-        public bool CanNotDie;
-        public double DiedFrames = 0;
-        private bool isHostile;
-        private readonly Action OnHostileChange = delegate { };
-        public bool Skip = false;
+        Entity = entity;
+        AllSettings = settings;
+        _distanceCache = new TimeCache<float>(() => entity.DistancePlayer, 200);
+        Update();
+    }
 
-        public HealthBar(Entity entity, HealthBarsSettings settings)
+    public void CheckUpdate()
+    {
+        var entityIsHostile = Entity.IsHostile;
+
+        if (_isHostile != entityIsHostile)
         {
-            Entity = entity;
-            _DistanceCache = new TimeCache<float>(() => entity.DistancePlayer, 200);
-            DebuffPanel = new DebuffPanel(entity);
+            _isHostile = entityIsHostile;
+            Update();
+        }
 
-            Update(entity, settings);
+        if (Settings.ShowDps)
+        {
+            DpsRefresh();
+        }
+    }
 
-            //CanNotDie = entity.GetComponent<Stats>().StatDictionary.ContainsKey(GameStat.CannotDie);
-            CanNotDie = entity.Path.StartsWith("Metadata/Monsters/Totems/Labyrinth");
+    public bool Skip { get; set; } = false;
+    public Vector2 LastPosition { get; set; }
+    private HealthBarsSettings AllSettings { get; }
 
-            var mods = entity?.GetComponent<ObjectMagicProperties>()?.Mods;
-            if (mods != null && mods.Contains("MonsterConvertsOnDeath_")) 
+    public UnitSettings Settings => Type switch
+    {
+        CreatureType.Player when _distanceCache.Value == 0 => AllSettings.Self,
+        CreatureType.Player => AllSettings.Players,
+        CreatureType.Minion => AllSettings.Minions,
+        CreatureType.Normal => AllSettings.NormalEnemy,
+        CreatureType.Magic => AllSettings.MagicEnemy,
+        CreatureType.Rare => AllSettings.RareEnemy,
+        CreatureType.Unique => AllSettings.UniqueEnemy,
+    };
+
+    public RectangleF DisplayArea { get; set; }
+    public float Distance => _distanceCache.Value;
+    public Entity Entity { get; }
+    public CreatureType Type { get; private set; }
+    public Life Life => Entity.GetComponent<Life>();
+    public float HpPercent => Life.HPPercentage;
+    public float EsPercent => Life.ESPercentage;
+    public float EhpPercent => CurrentEhp / (float)MaxEhp;
+    public int CurrentEhp => Life.CurHP + Life.CurES;
+    public int MaxEhp => Life.MaxHP + Life.MaxES;
+    public readonly Queue<(DateTime Time, int Value)> EhpHistory = new Queue<(DateTime, int)>();
+
+    public Color Color
+    {
+        get
+        {
+            if (IsHidden(Entity))
+                return Color.LightGray;
+
+            if (HpPercent * 100 <= AllSettings.CullPercent)
+                return Settings.CullableColor;
+
+            return Settings.LifeColor;
+        }
+    }
+
+    private static bool IsHidden(Entity entity)
+    {
+        try
+        {
+            return entity.IsHidden;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void Update()
+    {
+        Type = GetEntityType();
+    }
+
+    private CreatureType GetEntityType()
+    {
+        if (Entity.HasComponent<Player>())
+        {
+            return CreatureType.Player;
+        }
+
+        if (Entity.HasComponent<Monster>())
+        {
+            var objectMagicProperties = Entity.GetComponent<ObjectMagicProperties>();
+            if (Entity.IsHostile)
             {
-                OnHostileChange = () =>
+                return objectMagicProperties?.Rarity switch
                 {
-                    if (_init) Update(Entity, settings);
+                    MonsterRarity.White => CreatureType.Normal,
+                    MonsterRarity.Magic => CreatureType.Magic,
+                    MonsterRarity.Rare => CreatureType.Rare,
+                    MonsterRarity.Unique => CreatureType.Unique,
+                    _ => CreatureType.Minion
                 };
             }
-        }
-        public bool Skip { get; set; } = false;
-        public UnitSettings Settings { get; private set; }
-        public RectangleF BackGround { get; set; }
-        public DebuffPanel DebuffPanel { get; set; }
-        private TimeCache<float> _DistanceCache { get; set; }
-        public float Distance => _DistanceCache.Value;
-        public Entity Entity { get; }
-        public CreatureType Type { get; private set; }
-        public Life Life => Entity.GetComponent<Life>();
-        public float HpPercent => Life?.HPPercentage ?? 100;
-        public float HpWidth { get; set; }
-        public float EsWidth { get; set; }
 
-        public Color Color
-        {
-            get
-            {
-                if (IsHidden(Entity))
-                    return Color.LightGray;
-
-                if (HpPercent <= 0.1f)
-                    return Settings.Under10Percent;
-
-                return Settings.Color;
-            }
+            return CreatureType.Minion;
         }
 
-        private bool IsHidden(Entity entity)
-        {
-            try
-            {
-                return entity.IsHidden;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        return CreatureType.Minion;
+    }
 
-        public void Update(Entity entity, HealthBarsSettings settings)
+    private void DpsRefresh()
+    {
+        if (_dpsStopwatch.ElapsedMilliseconds >= 200)
         {
-            if (entity.HasComponent<Player>())
+            var hp = CurrentEhp;
+            if (hp == MaxEhp && EhpHistory.TryPeek(out var entry) && hp == entry.Value)
             {
-                Type = CreatureType.Player;
-                Settings = settings.Players;
+                EhpHistory.Clear();
             }
-            else if (entity.HasComponent<Monster>())
+            else
             {
-                if (entity.IsHostile)
+                while (EhpHistory.TryPeek(out entry) &&
+                       DateTime.UtcNow - entry.Time > TimeSpan.FromMilliseconds(AllSettings.DpsEstimateDuration))
                 {
-                    var objectMagicProperties = entity.GetComponent<ObjectMagicProperties>();
-
-                    if (objectMagicProperties != null)
-                    {
-                        switch (objectMagicProperties.Rarity)
-                        {
-                            case MonsterRarity.White:
-                                Type = CreatureType.Normal;
-                                Settings = settings.NormalEnemy;
-                                break;
-
-                            case MonsterRarity.Magic:
-                                Type = CreatureType.Magic;
-                                Settings = settings.MagicEnemy;
-                                break;
-
-                            case MonsterRarity.Rare:
-                                Settings = settings.RareEnemy;
-                                Type = CreatureType.Rare;
-                                break;
-
-                            case MonsterRarity.Unique:
-                                Settings = settings.UniqueEnemy;
-                                Type = CreatureType.Unique;
-                                break;
-                            default:
-                                Settings = settings.Minions;
-                                Type = CreatureType.Minion;
-                                break;
-                        }
-                    }
-                }
-                else
-                {
-                    Type = CreatureType.Minion;
-                    Settings = settings.Minions;
+                    EhpHistory.Dequeue();
                 }
             }
 
-            _lastHp = GetFullHp();
-            _init = true;
-        }
-
-        public bool IsShow(bool showEnemy)
-        {
-            if (Settings == null)
-                return false;
-
-            return !IsHostile ? Settings.Enable.Value : Settings.Enable.Value && showEnemy && IsHostile;
-        }
-
-        public void DpsRefresh()
-        {
-            var checkTime = DpsQueue.Count > 0 ? DPS_CHECK_TIME : DPS_FAST_CHECK_TIME;
-
-            if (dpsStopwatch.ElapsedMilliseconds >= checkTime)
-            {
-                var hp = GetFullHp();
-
-                if (hp > -1000000 && hp < 10000000 && _lastHp != hp)
-                {
-                    DpsQueue.AddFirst(-(_lastHp - hp));
-
-                    if (DpsQueue.Count > Settings.FloatingCombatStackSize)
-                    {
-                        DpsQueue.RemoveLast();
-                        dpsStopwatch.Restart();
-                    }
-
-                    _lastHp = hp;
-                }
-            }
-        }
-
-        public void DpsDequeue()
-        {
-            if (dpsStopwatch.ElapsedMilliseconds >= DPS_POP_TIME)
-            {
-                if (DpsQueue.Count > 0) DpsQueue.RemoveLast();
-                dpsStopwatch.Restart();
-            }
-        }
-
-        private int GetFullHp()
-        {
-            return Life.CurHP + Life.CurES;
+            EhpHistory.Enqueue((DateTime.UtcNow, hp));
         }
     }
 }
