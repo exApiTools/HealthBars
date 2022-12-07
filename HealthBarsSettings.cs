@@ -2,6 +2,7 @@ using ExileCore.Shared.Attributes;
 using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;
 using SharpDX;
+using Vector2 = System.Numerics.Vector2;
 
 namespace HealthBars;
 
@@ -12,15 +13,26 @@ public class HealthBarsSettings : ISettings
     public ToggleNode IgnoreUiElementVisibility { get; set; } = new(false);
     public ToggleNode ShowInTown { get; set; } = new(false);
     public ToggleNode ShowInHideout { get; set; } = new(true);
+    public ToggleNode EnableAbsolutePlayerBarPositioning { get; set; } = new(false);
+
+    [ConditionalDisplay(nameof(EnableAbsolutePlayerBarPositioning))]
+    public RangeNode<Vector2> PlayerBarPosition { get; set; } = new(new Vector2(1000, 1000), Vector2.Zero, Vector2.One * 4000);
+
     public RangeNode<float> SmoothingFactor { get; set; } = new(0, 0, 0.99f);
+
+    [ConditionalDisplay(nameof(EnableAbsolutePlayerBarPositioning), false)]
     public RangeNode<float> PlayerSmoothingFactor { get; set; } = new(1, 0, 1);
+
     public RangeNode<int> GlobalZOffset { get; set; } = new(0, -300, 300);
+
+    [ConditionalDisplay(nameof(EnableAbsolutePlayerBarPositioning), false)]
     public RangeNode<int> PlayerZOffset { get; set; } = new(0, -300, 300);
 
     [Menu(null, "By default, bar is placed relative to the model top")]
     public ToggleNode PlaceBarRelativeToGroundLevel { get; set; } = new(false);
 
     [Menu(null, "By default, bar is placed relative to the model top")]
+    [ConditionalDisplay(nameof(EnableAbsolutePlayerBarPositioning), false)]
     public ToggleNode PlacePlayerBarRelativeToGroundLevel { get; set; } = new(false);
 
     public RangeNode<int> DrawDistanceLimit { get; set; } = new(133, 0, 1000);
@@ -32,6 +44,9 @@ public class HealthBarsSettings : ISettings
 
     [Menu(null, "Combines Life and ES into a single bar that's filled proportionally to the total EHP")]
     public ToggleNode CombineLifeAndEs { get; set; } = new(true);
+
+    [ConditionalDisplay(nameof(CombineLifeAndEs), false)]
+    public RangeNode<float> EsBarHeight { get; set; } = new(1 / 3f, 0, 1);
 
     public ColorNode CombatDamageColor { get; set; } = Color.Red;
     public ColorNode CombatHealColor { get; set; } = Color.Green;
@@ -99,7 +114,7 @@ public class HealthBarsSettings : ISettings
     };
 }
 
-[Submenu]
+[Submenu(CollapsedByDefault = true)]
 public class UnitSettings
 {
     public ToggleNode Show { get; set; } = new(true);
@@ -116,8 +131,9 @@ public class UnitSettings
     public ColorNode TextColor { get; set; } = Color.White;
     public ColorNode TextBackground { get; set; } = Color.Black;
     public ColorNode HealthSegmentColor { get; set; } = Color.Black;
-    public ToggleNode DisplayTextInHealthBar { get; set; } = new(false);
+    public RangeNode<Vector2> TextPosition { get; set; } = new(new Vector2(0, -1), new Vector2(-1, -1), new Vector2(1, 1));
     public ToggleNode ShowDps { get; set; } = new(true);
+    public RangeNode<float> HoverOpacity { get; set; } = new RangeNode<float>(1, 0, 1);
 
     [Menu(null,
         "Text template to show next to the bar. Available variables are:\n" +

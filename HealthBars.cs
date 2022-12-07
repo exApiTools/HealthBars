@@ -8,6 +8,8 @@ using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Cache;
 using ExileCore.Shared.Enums;
+using ExileCore.Shared.Helpers;
+using ImGuiNET;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
 
@@ -54,6 +56,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         ReadIgnoreFile();
         Settings.PlayerZOffset.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
         Settings.PlacePlayerBarRelativeToGroundLevel.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
+        Settings.EnableAbsolutePlayerBarPositioning.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
         return true;
     }
 
@@ -175,21 +178,39 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             }
         }
 
-        if (Settings.Self.Show && _playerBar is { } playerBar)
+        PositionPlayerBar();
+    }
+
+    private void PositionPlayerBar()
+    {
+        if (!Settings.Self.Show || _playerBar is not { } playerBar)
         {
-            var worldCoords = playerBar.Entity.PosNum;
-            if (!Settings.PlacePlayerBarRelativeToGroundLevel)
+            return;
+        }
+
+        var worldCoords = playerBar.Entity.PosNum;
+        if (!Settings.PlacePlayerBarRelativeToGroundLevel)
+        {
+            if (playerBar.Entity.GetComponent<Render>()?.BoundsNum is { } boundsNum)
             {
-                if (playerBar.Entity.GetComponent<Render>()?.BoundsNum is { } boundsNum)
-                {
-                    worldCoords.Z -= 2 * boundsNum.Z;
-                }
+                worldCoords.Z -= 2 * boundsNum.Z;
             }
+        }
 
-            worldCoords.Z += Settings.PlayerZOffset;
-            var result = Camera.WorldToScreen(worldCoords);
+        worldCoords.Z += Settings.PlayerZOffset;
+        var result = Camera.WorldToScreen(worldCoords);
 
-            if (Settings.PlayerSmoothingFactor >= 1)
+        if (Settings.EnableAbsolutePlayerBarPositioning)
+        {
+            _oldPlayerCoord = result = Settings.PlayerBarPosition;
+        }
+        else
+        {
+            if (_oldPlayerCoord == Vector2.Zero)
+            {
+                _oldPlayerCoord = result;
+            }
+            else if (Settings.PlayerSmoothingFactor >= 1)
             {
                 if ((_oldPlayerCoord - result).LengthSquared() < 40 * 40)
                     result = _oldPlayerCoord;
@@ -198,17 +219,17 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             }
             else
             {
-                result = Vector2.Lerp(result, _oldPlayerCoord, _oldPlayerCoord == Vector2.Zero ? 0 : Math.Max(0, Settings.SmoothingFactor));
+                result = Vector2.Lerp(result, _oldPlayerCoord, _oldPlayerCoord == Vector2.Zero ? 0 : Math.Max(0, Settings.PlayerSmoothingFactor));
                 _oldPlayerCoord = result;
             }
-
-            var scaledWidth = playerBar.Settings.Width * WindowRelativeSize.Width;
-            var scaledHeight = playerBar.Settings.Height * WindowRelativeSize.Height;
-
-            var background = new RectangleF(result.X, result.Y, 0, 0);
-            background.Inflate(scaledWidth / 2f, scaledHeight / 2f);
-            playerBar.DisplayArea = background;
         }
+
+        var scaledWidth = playerBar.Settings.Width * WindowRelativeSize.Width;
+        var scaledHeight = playerBar.Settings.Height * WindowRelativeSize.Height;
+
+        var background = new RectangleF(result.X, result.Y, 0, 0);
+        background.Inflate(scaledWidth / 2f, scaledHeight / 2f);
+        playerBar.DisplayArea = background;
     }
 
     public override void Render()
@@ -236,13 +257,24 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             barArea.Inflate(Math.Max(0, (barTextSize.X - barArea.Width) / 2), Math.Max(0, (barTextSize.Y - barArea.Height) / 2));
         }
 
-        Graphics.DrawImage(HealthbarTexture, barArea, bar.Settings.BackgroundColor);
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        var alphaMulti = bar.Settings.HoverOpacity != 1
+                         && ImGui.IsMouseHoveringRect(barArea.TopLeft.ToVector2Num(), barArea.BottomRight.ToVector2Num(), false)
+            ? bar.Settings.HoverOpacity
+            : 1f;
+        if (alphaMulti == 0)
+        {
+            return;
+        }
+
+        Graphics.DrawImage(HealthbarTexture, barArea, bar.Settings.BackgroundColor.MultiplyAlpha(alphaMulti));
         if (!Settings.CombineLifeAndEs)
         {
             var hpWidth = barArea.Width * bar.HpPercent;
             var esWidth = barArea.Width * bar.EsPercent;
-            Graphics.DrawImage(HealthbarTexture, barArea with { Width = hpWidth }, bar.Color);
-            Graphics.DrawImage(HealthbarTexture, new RectangleF(barArea.X, barArea.Y, esWidth, barArea.Height / 3), bar.Settings.EsColor);
+            Graphics.DrawImage(HealthbarTexture, barArea with { Width = hpWidth }, bar.Color.MultiplyAlpha(alphaMulti));
+            Graphics.DrawImage(HealthbarTexture, new RectangleF(barArea.X, barArea.Y, esWidth, barArea.Height * Settings.EsBarHeight),
+                bar.Settings.EsColor.MultiplyAlpha(alphaMulti));
         }
         else
         {
@@ -253,8 +285,8 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             var esWidthFraction = fullEsWidthFraction * bar.EsPercent;
             var hpWidth = hpWidthFraction * barArea.Width;
             var esWidth = esWidthFraction * barArea.Width;
-            Graphics.DrawImage(HealthbarTexture, barArea with { Width = hpWidth }, bar.Color);
-            Graphics.DrawImage(HealthbarTexture, new RectangleF(barArea.X + hpWidth, barArea.Y, esWidth, barArea.Height), bar.Settings.EsColor);
+            Graphics.DrawImage(HealthbarTexture, barArea with { Width = hpWidth }, bar.Color.MultiplyAlpha(alphaMulti));
+            Graphics.DrawImage(HealthbarTexture, new RectangleF(barArea.X + hpWidth, barArea.Y, esWidth, barArea.Height), bar.Settings.EsColor.MultiplyAlpha(alphaMulti));
         }
 
         var segmentCount = bar.Settings.HealthSegments.Value;
@@ -266,24 +298,24 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
                 barArea.Bottom - barArea.Height * bar.Settings.HealthSegmentHeight,
                 1,
                 barArea.Height * bar.Settings.HealthSegmentHeight);
-            Graphics.DrawImage(FlatHealthbarTexture, notchRect, bar.Settings.HealthSegmentColor);
+            Graphics.DrawImage(FlatHealthbarTexture, notchRect, bar.Settings.HealthSegmentColor.MultiplyAlpha(alphaMulti));
         }
 
         if (bar.Settings.OutlineThickness > 0 && bar.Settings.OutlineColor.Value.A > 0)
         {
             var outlineRect = barArea;
             outlineRect.Inflate(1, 1);
-            Graphics.DrawFrame(outlineRect, bar.Settings.OutlineColor, bar.Settings.OutlineThickness.Value);
+            Graphics.DrawFrame(outlineRect, bar.Settings.OutlineColor.MultiplyAlpha(alphaMulti), bar.Settings.OutlineThickness.Value);
         }
 
-        ShowNumbersInHealthbar(bar, barText);
+        ShowNumbersInHealthbar(bar, barText, alphaMulti);
         if (bar.Settings.ShowDps)
         {
-            ShowDps(bar);
+            ShowDps(bar, alphaMulti);
         }
     }
 
-    private void ShowDps(HealthBar bar)
+    private void ShowDps(HealthBar bar, float alphaMulti)
     {
         const int margin = 2;
         if (bar.EhpHistory.Count < 2) return;
@@ -306,22 +338,27 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         var dpsText = dps.FormatHp();
         var textArea = Graphics.MeasureText(dpsText);
         var textCenter = new Vector2(bar.DisplayArea.Center.X, bar.DisplayArea.Bottom + textArea.Y / 2 + margin);
-        Graphics.DrawBox(textCenter - textArea / 2, textCenter + textArea / 2, bar.Settings.TextBackground);
-        Graphics.DrawText(dpsText, textCenter - textArea / 2, damageColor);
+        Graphics.DrawBox(textCenter - textArea / 2, textCenter + textArea / 2, bar.Settings.TextBackground.MultiplyAlpha(alphaMulti));
+        Graphics.DrawText(dpsText, textCenter - textArea / 2, damageColor.MultiplyAlpha(alphaMulti));
     }
 
-    private void ShowNumbersInHealthbar(HealthBar bar, string text)
+    private void ShowNumbersInHealthbar(HealthBar bar, string text, float alphaMulti)
     {
         if (text != null)
         {
             var textArea = Graphics.MeasureText(text);
-            var textCenter = new Vector2(bar.DisplayArea.Center.X, bar.Settings.DisplayTextInHealthBar ? bar.DisplayArea.Center.Y : bar.DisplayArea.Y - textArea.Y / 2);
-            if (!bar.Settings.DisplayTextInHealthBar)
+            var barCenter = bar.DisplayArea.Center.ToVector2Num();
+            var textOffset = bar.Settings.TextPosition.Value.Mult(bar.DisplayArea.Width + textArea.X, bar.DisplayArea.Height + textArea.Y) / 2;
+            var textCenter = barCenter + textOffset;
+            var textTopLeft = textCenter - textArea / 2;
+            var textRect = new RectangleF(textTopLeft.X, textTopLeft.Y, textArea.X, textArea.Y);
+            bar.DisplayArea.Contains(ref textRect, out var textIsInsideBar);
+            if (!textIsInsideBar)
             {
-                Graphics.DrawBox(textCenter - textArea / 2, textCenter + textArea / 2, bar.Settings.TextBackground);
+                Graphics.DrawBox(textTopLeft, textTopLeft + textArea, bar.Settings.TextBackground.MultiplyAlpha(alphaMulti));
             }
 
-            Graphics.DrawText(text, textCenter - textArea / 2, bar.Settings.TextColor);
+            Graphics.DrawText(text, textTopLeft, bar.Settings.TextColor.MultiplyAlpha(alphaMulti));
         }
     }
 

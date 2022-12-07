@@ -1,5 +1,6 @@
 using System;
 using ExileCore;
+using ExileCore.Shared.Nodes;
 using SharpDX;
 
 namespace HealthBars;
@@ -54,5 +55,15 @@ public static class Extensions
     public static string FormatHp(this double hp)
     {
         return ((long)hp).FormatHp();
+    }
+
+    public static Color MultiplyAlpha(this Color color, float alphaMultiplier)
+    {
+        return color with { A = (byte)(color.A * alphaMultiplier) };
+    }
+
+    public static Color MultiplyAlpha(this ColorNode color, float alphaMultiplier)
+    {
+        return color.Value with { A = (byte)(color.Value.A * alphaMultiplier) };
     }
 }
