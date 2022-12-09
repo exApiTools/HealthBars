@@ -11,7 +11,6 @@ using ExileCore.Shared.Enums;
 using ExileCore.Shared.Helpers;
 using ImGuiNET;
 using SharpDX;
-using Vector2 = System.Numerics.Vector2;
 
 namespace HealthBars;
 
@@ -106,10 +105,10 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         healthBar.CheckUpdate();
 
-        var worldCoords = healthBar.Entity.PosNum;
+        var worldCoords = healthBar.Entity.Pos;
         if (!Settings.PlaceBarRelativeToGroundLevel)
         {
-            if (healthBar.Entity.GetComponent<Render>()?.BoundsNum is { } boundsNum)
+            if (healthBar.Entity.GetComponent<Render>()?.Bounds is { } boundsNum)
             {
                 worldCoords.Z -= 2 * boundsNum.Z;
             }
@@ -188,10 +187,10 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             return;
         }
 
-        var worldCoords = playerBar.Entity.PosNum;
+        var worldCoords = playerBar.Entity.Pos;
         if (!Settings.PlacePlayerBarRelativeToGroundLevel)
         {
-            if (playerBar.Entity.GetComponent<Render>()?.BoundsNum is { } boundsNum)
+            if (playerBar.Entity.GetComponent<Render>()?.Bounds is { } boundsNum)
             {
                 worldCoords.Z -= 2 * boundsNum.Z;
             }
@@ -202,7 +201,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         if (Settings.EnableAbsolutePlayerBarPositioning)
         {
-            _oldPlayerCoord = result = Settings.PlayerBarPosition;
+            _oldPlayerCoord = result = new Vector2(Settings.PlayerBarPosition.Value.X, Settings.PlayerBarPosition.Value.Y);
         }
         else
         {
@@ -337,7 +336,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         var dpsText = dps.FormatHp();
         var textArea = Graphics.MeasureText(dpsText);
-        var textCenter = new Vector2(bar.DisplayArea.Center.X, bar.DisplayArea.Bottom + textArea.Y / 2 + margin);
+        var textCenter = new Vector2(bar.DisplayArea.Center.X, bar.DisplayArea.Bottom + textArea.Y / 2 + margin).ToVector2Num();
         Graphics.DrawBox(textCenter - textArea / 2, textCenter + textArea / 2, bar.Settings.TextBackground.MultiplyAlpha(alphaMulti));
         Graphics.DrawText(dpsText, textCenter - textArea / 2, damageColor.MultiplyAlpha(alphaMulti));
     }
