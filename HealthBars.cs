@@ -162,11 +162,6 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         {
             var healthBar = validEntity.GetHudComponent<HealthBar>();
             if (healthBar == null) continue;
-            if (validEntity.GetComponent<Life>() != null && !validEntity.IsAlive)
-            {
-                validEntity.SetHudComponent<HealthBar>(null);
-                continue;
-            }
 
             try
             {
