@@ -8,6 +8,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>embedded</DebugType>
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
+    <EmbedAllSources>true</EmbedAllSources>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="config\ignored_entities.txt" />
