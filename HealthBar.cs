@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
 using ExileCore.Shared.Cache;
@@ -12,6 +13,7 @@ namespace HealthBars;
 
 public class HealthBar
 {
+    private static long _idCounter;
     private readonly Stopwatch _dpsStopwatch = Stopwatch.StartNew();
     private bool _isHostile;
     private readonly CachedValue<float> _distanceCache;
@@ -43,10 +45,11 @@ public class HealthBar
     public bool Skip { get; set; } = false;
     public Vector2 LastPosition { get; set; }
     private HealthBarsSettings AllSettings { get; }
+    public long StableId { get; } = Interlocked.Increment(ref _idCounter);
 
     public UnitSettings Settings => Type switch
     {
-        CreatureType.Player when _distanceCache.Value == 0 => AllSettings.Self,
+        CreatureType.Player when Entity.Equals(Entity.Player) => AllSettings.Self,
         CreatureType.Player => AllSettings.Players,
         CreatureType.Minion => AllSettings.Minions,
         CreatureType.Normal => AllSettings.NormalEnemy,

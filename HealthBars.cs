@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using ExileCore;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
@@ -10,6 +13,7 @@ using ExileCore.Shared.Cache;
 using ExileCore.Shared.Enums;
 using ExileCore.Shared.Helpers;
 using ImGuiNET;
+using Newtonsoft.Json;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
 
@@ -19,15 +23,17 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 {
     private const string ShadedHealthbarTexture = "healthbar.png";
     private const string FlatHealthbarTexture = "chest.png";
-    private static readonly string IgnoreFile = Path.Combine("config", "ignored_entities.txt");
-    private List<string> IgnoredEntities { get; set; } = new();
+    private string OldConfigPath => Path.Combine(DirectoryFullName, "config", "ignored_entities.txt");
+    private string NewConfigCustomPath => Path.Join(ConfigDirectory, "entityConfig.json");
 
-    private bool _canTick = true;
     private Camera Camera => GameController.IngameState.Camera;
     private IngameUIElements IngameUi => GameController.IngameState.IngameUi;
     private Size2F WindowRelativeSize => new Size2F(_windowRectangle.Value.Width / 2560, _windowRectangle.Value.Height / 1600);
     private string HealthbarTexture => Settings.UseShadedTexture ? ShadedHealthbarTexture : FlatHealthbarTexture;
 
+    private readonly ConcurrentDictionary<string, EntityTreatmentRule> _pathRuleCache = new();
+    private bool _canTick = true;
+    private IndividualEntityConfig _entityConfig = new IndividualEntityConfig(new SerializedIndividualEntityConfig());
     private Vector2 _oldPlayerCoord;
     private HealthBar _playerBar;
     private CachedValue<bool> _ingameUiCheckVisible;
@@ -53,41 +59,89 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             IngameUi.TreePanel.IsVisibleLocal ||
             IngameUi.Atlas.IsVisibleLocal ||
             IngameUi.CraftBench.IsVisibleLocal, 250);
-        ReadIgnoreFile();
+        LoadConfig();
         Settings.PlayerZOffset.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
         Settings.PlacePlayerBarRelativeToGroundLevel.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
         Settings.EnableAbsolutePlayerBarPositioning.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
+        Settings.ExportDefaultConfig.OnPressed += () => { File.WriteAllText(NewConfigCustomPath, GetEmbeddedConfigString()); };
         return true;
     }
 
-    private void ReadIgnoreFile()
+    private void LoadConfig()
     {
-        var path = Path.Combine(DirectoryFullName, IgnoreFile);
-        if (File.Exists(path))
+        _pathRuleCache.Clear();
+        if (Settings.UseOldConfigFormat)
         {
-            IgnoredEntities = File.ReadAllLines(path)
+            LoadOldEntityConfigFormat();
+        }
+        else
+        {
+            if (File.Exists(NewConfigCustomPath))
+            {
+                try
+                {
+                    var content = File.ReadAllText(NewConfigCustomPath);
+                    _entityConfig = new IndividualEntityConfig(JsonConvert.DeserializeObject<SerializedIndividualEntityConfig>(content));
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    DebugWindow.LogError($"Unable to load custom config file, falling back to default: {ex}");
+                }
+            }
+
+            _entityConfig = LoadEmbeddedConfig();
+        }
+    }
+
+    private static IndividualEntityConfig LoadEmbeddedConfig()
+    {
+        var content = GetEmbeddedConfigString();
+        return new IndividualEntityConfig(JsonConvert.DeserializeObject<SerializedIndividualEntityConfig>(content));
+    }
+
+    private static string GetEmbeddedConfigString()
+    {
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("entityConfig.default.json");
+        using var reader = new StreamReader(stream);
+        var content = reader.ReadToEnd();
+        return content;
+    }
+
+    private void LoadOldEntityConfigFormat()
+    {
+        if (File.Exists(OldConfigPath))
+        {
+            var ignoredEntities = File.ReadAllLines(OldConfigPath)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Select(x => x.Trim())
                 .Where(line => !line.StartsWith("#"))
                 .ToList();
+            _entityConfig = new IndividualEntityConfig(new SerializedIndividualEntityConfig
+            {
+                EntityPathConfig = ignoredEntities.ToDictionary(
+                    x => $"^{Regex.Escape(x)}",
+                    _ => new EntityTreatmentRule { Ignore = true }),
+            });
         }
         else
         {
-            IgnoredEntities = new List<string>();
-            LogError($"Ignored entities file does not exist. Path: {path}");
+            _entityConfig = new IndividualEntityConfig(new SerializedIndividualEntityConfig());
+            LogError($"Ignored entities file does not exist. Path: {OldConfigPath}");
         }
     }
+
 
     public override void AreaChange(AreaInstance area)
     {
         _oldPlayerCoord = Vector2.Zero;
-        ReadIgnoreFile();
+        LoadConfig();
     }
 
-    private bool SkipHealthBar(HealthBar healthBar)
+    private bool SkipHealthBar(HealthBar healthBar, bool checkDistance)
     {
         if (healthBar.Settings?.Show != true) return true;
-        if (healthBar.Distance > Settings.DrawDistanceLimit) return true;
+        if (checkDistance && healthBar.Distance > Settings.DrawDistanceLimit) return true;
         if (healthBar.Life == null) return true;
         if (!healthBar.Entity.IsAlive) return true;
         if (healthBar.HpPercent < 0.001f) return true;
@@ -101,8 +155,8 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
     private void HpBarWork(HealthBar healthBar)
     {
-        healthBar.Skip = SkipHealthBar(healthBar);
-        if (healthBar.Skip) return;
+        healthBar.Skip = SkipHealthBar(healthBar, true);
+        if (healthBar.Skip && !ShowInBossOverlay(healthBar)) return;
 
         healthBar.CheckUpdate();
 
@@ -230,33 +284,87 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
     public override void Render()
     {
         if (!_canTick) return;
-
+        var bossOverlayItems = new List<HealthBar>();
         foreach (var entity in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Monster]
                      .Concat(GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player]))
         {
-            if (entity.GetHudComponent<HealthBar>() is { Skip: false } healthBar)
+            if (entity.GetHudComponent<HealthBar>() is not { } healthBar)
+            {
+                continue;
+            }
+
+            if (!healthBar.Skip)
             {
                 DrawBar(healthBar);
+                if (IsCastBarEnabled(healthBar))
+                {
+                    var lifeArea = healthBar.DisplayArea;
+                    DrawCastBar(healthBar,
+                        lifeArea with
+                        {
+                            Y = lifeArea.Y + lifeArea.Height * (healthBar.Settings.CastBarSettings.YOffset + 1),
+                            Height = healthBar.Settings.CastBarSettings.Height,
+                        }, healthBar.Settings.CastBarSettings.ShowStageNames,
+                        Settings.CommonCastBarSettings.ShowNextStageName,
+                        Settings.CommonCastBarSettings.MaxSkillNameLength);
+                }
             }
+
+            if (ShowInBossOverlay(healthBar) && !SkipHealthBar(healthBar, false))
+            {
+                bossOverlayItems.Add(healthBar);
+            }
+        }
+
+        bossOverlayItems.Sort((x, y) => x.StableId.CompareTo(y.StableId));
+        DrawBossOverlay(bossOverlayItems);
+    }
+
+    private void DrawBossOverlay(IEnumerable<HealthBar> items)
+    {
+        if (!Settings.BossOverlaySettings.Show)
+        {
+            return;
+        }
+
+        var barPosition = Settings.BossOverlaySettings.Location.Value;
+        foreach (var healthBar in items.Take(Settings.BossOverlaySettings.MaxEntries))
+        {
+            var lifeRect = new RectangleF(barPosition.X, barPosition.Y, Settings.BossOverlaySettings.Width, Settings.BossOverlaySettings.BarHeight);
+            DrawBar(healthBar, lifeRect, false, false, Settings.BossOverlaySettings.ShowMonsterNames ? healthBar.Entity.RenderName : null);
+            barPosition.Y += lifeRect.Height;
+            if (IsCastBarEnabled(healthBar))
+            {
+                DrawCastBar(healthBar, lifeRect with { Y = lifeRect.Bottom },
+                    Settings.BossOverlaySettings.ShowCastBarStageNames,
+                    Settings.CommonCastBarSettings.ShowNextStageNameInBossOverlay,
+                    Settings.CommonCastBarSettings.MaxSkillNameLengthForBossOverlay);
+                barPosition.Y += lifeRect.Height;
+            }
+
+            barPosition.Y += Settings.BossOverlaySettings.ItemSpacing;
         }
     }
 
     private void DrawBar(HealthBar bar)
     {
-        var barText = GetTemplatedText(bar);
-        var barArea = bar.DisplayArea;
+        var enableResizing = Settings.ResizeBarsToFitText;
+        var showDps = bar.Settings.ShowDps;
+        DrawBar(bar, bar.DisplayArea, enableResizing, showDps, null);
+    }
 
-        if (barText != null && Settings.ResizeBarsToFitText)
+    private void DrawBar(HealthBar bar, RectangleF barArea, bool enableResizing, bool showDps, string textPrefix)
+    {
+        var barText = $"{textPrefix} {GetTemplatedText(bar)}";
+        barText = string.IsNullOrWhiteSpace(barText) ? null : barText.Trim();
+
+        if (barText != null && enableResizing)
         {
             var barTextSize = Graphics.MeasureText(barText);
             barArea.Inflate(Math.Max(0, (barTextSize.X - barArea.Width) / 2), Math.Max(0, (barTextSize.Y - barArea.Height) / 2));
         }
 
-        // ReSharper disable once CompareOfFloatsByEqualityOperator
-        var alphaMulti = bar.Settings.HoverOpacity != 1
-                         && ImGui.IsMouseHoveringRect(barArea.TopLeft.ToVector2Num(), barArea.BottomRight.ToVector2Num(), false)
-            ? bar.Settings.HoverOpacity
-            : 1f;
+        var alphaMulti = GetAlphaMulti(bar, barArea);
         if (alphaMulti == 0)
         {
             return;
@@ -303,14 +411,24 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             Graphics.DrawFrame(outlineRect, bar.Settings.OutlineColor.MultiplyAlpha(alphaMulti), bar.Settings.OutlineThickness.Value);
         }
 
-        ShowNumbersInHealthbar(bar, barText, alphaMulti);
-        if (bar.Settings.ShowDps)
+        ShowHealthbarText(bar, barText, alphaMulti, barArea);
+        if (showDps)
         {
-            ShowDps(bar, alphaMulti);
+            ShowDps(bar, alphaMulti, barArea);
         }
     }
 
-    private void ShowDps(HealthBar bar, float alphaMulti)
+    private static float GetAlphaMulti(HealthBar bar, RectangleF barArea)
+    {
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        var alphaMulti = bar.Settings.HoverOpacity != 1
+                         && ImGui.IsMouseHoveringRect(barArea.TopLeft.ToVector2Num(), barArea.BottomRight.ToVector2Num(), false)
+            ? bar.Settings.HoverOpacity
+            : 1f;
+        return alphaMulti;
+    }
+
+    private void ShowDps(HealthBar bar, float alphaMulti, RectangleF area)
     {
         const int margin = 2;
         if (bar.EhpHistory.Count < 2) return;
@@ -332,22 +450,22 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         var dpsText = dps.FormatHp();
         var textArea = Graphics.MeasureText(dpsText);
-        var textCenter = new Vector2(bar.DisplayArea.Center.X, bar.DisplayArea.Bottom + textArea.Y / 2 + margin);
+        var textCenter = new Vector2(area.Center.X, area.Bottom + textArea.Y / 2 + margin);
         Graphics.DrawBox(textCenter - textArea / 2, textCenter + textArea / 2, bar.Settings.TextBackground.MultiplyAlpha(alphaMulti));
         Graphics.DrawText(dpsText, textCenter - textArea / 2, damageColor.MultiplyAlpha(alphaMulti));
     }
 
-    private void ShowNumbersInHealthbar(HealthBar bar, string text, float alphaMulti)
+    private void ShowHealthbarText(HealthBar bar, string text, float alphaMulti, RectangleF area)
     {
         if (text != null)
         {
             var textArea = Graphics.MeasureText(text);
-            var barCenter = bar.DisplayArea.Center.ToVector2Num();
-            var textOffset = bar.Settings.TextPosition.Value.Mult(bar.DisplayArea.Width + textArea.X, bar.DisplayArea.Height + textArea.Y) / 2;
+            var barCenter = area.Center.ToVector2Num();
+            var textOffset = bar.Settings.TextPosition.Value.Mult(area.Width + textArea.X, area.Height + textArea.Y) / 2;
             var textCenter = barCenter + textOffset;
             var textTopLeft = textCenter - textArea / 2;
             var textRect = new RectangleF(textTopLeft.X, textTopLeft.Y, textArea.X, textArea.Y);
-            bar.DisplayArea.Contains(ref textRect, out var textIsInsideBar);
+            area.Contains(ref textRect, out var textIsInsideBar);
             if (!textIsInsideBar)
             {
                 Graphics.DrawBox(textTopLeft, textTopLeft + textArea, bar.Settings.TextBackground.MultiplyAlpha(alphaMulti));
@@ -373,11 +491,114 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             .Replace("{currentlife}", bar.Life.CurHP.FormatHp());
     }
 
+    private static readonly HashSet<string> DangerousStages = new HashSet<string>
+    {
+        "contact",
+        "slam",
+        "teleport",
+        "small_beam_blast",
+        "medium_beam_blast",
+        "large_beam_blast",
+        "clone_beam_blast",
+        "beam_l",
+        "beam_r",
+        "clap",
+        "stab",
+        "slash",
+        "ice_shard",
+        "wind_force",
+        "wave",
+    };
+
+    private void DrawCastBar(HealthBar bar, RectangleF area, bool drawStageNames, bool showNextStageName, int maxSkillNameLength)
+    {
+        if (!bar.Entity.TryGetComponent<Actor>(out var actor))
+        {
+            return;
+        }
+
+        if (actor?.AnimationController is not { } ac || actor.Action != ActionFlags.UsingAbility || ac.RawAnimationSpeed == 0)
+        {
+            return;
+        }
+
+        var stages = ac.CurrentAnimation.AllStages.ToList();
+        var settings = bar.Settings.CastBarSettings;
+        var maxRawProgress = Settings.CommonCastBarSettings.CutOffBackswing
+            ? stages.LastOrDefault(x => DangerousStages.Contains(x.StageName))?.StageStart ?? ac.MaxRawAnimationProgress
+            : ac.MaxRawAnimationProgress;
+        if (ac.RawAnimationProgress > maxRawProgress)
+        {
+            return;
+        }
+
+        var alphaMulti = GetAlphaMulti(bar, area);
+        if (alphaMulti == 0)
+        {
+            return;
+        }
+
+        var width = area.Width;
+        var height = area.Height;
+        var maxProgress = ac.TransformProgress(maxRawProgress);
+        var topLeft = area.TopLeft.ToVector2Num();
+        var bottomRight = topLeft + new Vector2(width, height);
+        Graphics.DrawBox(topLeft, bottomRight, settings.BackgroundColor.MultiplyAlpha(alphaMulti));
+        Graphics.DrawBox(topLeft, topLeft + new Vector2(width * ac.TransformedRawAnimationProgress / maxProgress, height), settings.FillColor.MultiplyAlpha(alphaMulti));
+
+        var nextDangerousStage = stages.FirstOrDefault(x => x.StageStart > ac.RawAnimationProgress && DangerousStages.Contains(x.StageName));
+        var stageIn = nextDangerousStage != null
+            ? (ac.TransformProgress(nextDangerousStage.StageStart) - ac.TransformedRawAnimationProgress) / ac.AnimationSpeed
+            : ac.AnimationCompletesIn.TotalSeconds;
+        var mainText = (nextDangerousStage != null && showNextStageName, maxSkillNameLength) switch
+        {
+            (true, <= 0) => $"{nextDangerousStage?.StageName} in {stageIn:F1}",
+            (false, <= 0) => $"{stageIn:F1}",
+            (true, var v and > 0) => $"{actor.CurrentAction?.Skill?.Name?.Truncate(v)} {nextDangerousStage?.StageName} in {stageIn:F1}",
+            (false, var v and > 0) => $"{actor.CurrentAction?.Skill?.Name?.Truncate(v)} in {stageIn:F1}",
+        };
+        var oldTextSize = Graphics.MeasureText(mainText);
+        using (Graphics.SetTextScale(Math.Min(height / oldTextSize.Y, width / oldTextSize.X)))
+        {
+            var color = (nextDangerousStage != null ? settings.DangerTextColor : settings.NoDangerTextColor).MultiplyAlpha(alphaMulti);
+            Graphics.DrawText(mainText, topLeft, color);
+        }
+
+        var occupiedSlots = new Dictionary<int, float>();
+        var textLineHeight = Graphics.MeasureText("A").Y;
+        var displayAllSkillStages = Settings.CommonCastBarSettings.DebugShowAllSkillStages;
+        foreach (var stage in stages.Where(x => displayAllSkillStages || DangerousStages.Contains(x.StageName)))
+        {
+            var normalizedStageStart = ac.TransformProgress(stage.StageStart) / maxProgress;
+            if (ReferenceEquals(stage, nextDangerousStage) && Math.Abs(normalizedStageStart - 1) < 1e-3)
+            {
+                continue;
+            }
+
+            var stageX = topLeft.X + normalizedStageStart * width;
+            if (drawStageNames)
+            {
+                var line = Enumerable.Range(0, 100).FirstOrDefault(x => occupiedSlots.GetValueOrDefault(x, float.NegativeInfinity) < stageX);
+                var text = displayAllSkillStages ? $"{normalizedStageStart}:{stage.StageName}" : $"{stage.StageName}";
+                var textSize = Graphics.MeasureText(text);
+                occupiedSlots[line] = stageX + textSize.X + 20;
+                var textStart = new Vector2(stageX, topLeft.Y + height + line * textLineHeight);
+                Graphics.DrawBox(textStart, textStart + textSize, settings.BackgroundColor.MultiplyAlpha(alphaMulti));
+                Graphics.DrawText(text, textStart, settings.StageTextColor.MultiplyAlpha(alphaMulti));
+                Graphics.DrawLine(textStart, topLeft with { X = textStart.X }, 1, Color.Green.MultiplyAlpha(alphaMulti));
+            }
+            else
+            {
+                Graphics.DrawLine(topLeft with { X = stageX }, bottomRight with { X = stageX }, 1, Color.Green.MultiplyAlpha(alphaMulti));
+            }
+        }
+    }
+
     public override void EntityAdded(Entity entity)
     {
         if (entity.Type != EntityType.Monster && entity.Type != EntityType.Player ||
             entity.GetComponent<Life>() != null && !entity.IsAlive ||
-            IgnoredEntities.Any(x => entity.Path.StartsWith(x)))
+            FindRule(entity.Path).Ignore == true)
         {
             return;
         }
@@ -388,5 +609,21 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         {
             _playerBar = healthBar;
         }
+    }
+
+    private EntityTreatmentRule FindRule(string path)
+    {
+        return _pathRuleCache.GetOrAdd(path, p => _entityConfig.Rules.FirstOrDefault(x => x.Regex.IsMatch(p)).Rule ?? new EntityTreatmentRule());
+    }
+
+    private bool ShowInBossOverlay(HealthBar bar)
+    {
+        return Settings.BossOverlaySettings.Show &&
+               (FindRule(bar.Entity.Path).ShowInBossOverlay ?? bar.Settings.IncludeInBossOverlay.Value);
+    }
+
+    private bool IsCastBarEnabled(HealthBar bar)
+    {
+        return FindRule(bar.Entity.Path).ShowCastBar ?? bar.Settings.CastBarSettings.Show.Value;
     }
 }

@@ -1,0 +1,355 @@
+{
+  "entityPathConfig": {
+    "^Metadata/Monsters/AtlasExiles/AtlasExile1@": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile2_": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile3@": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile3AcidPitDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile3BurrowingViperMelee": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile3BurrowingViperRanged": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile4@": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile4ApparitionCascade": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile5Apparition": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/AtlasExile5Throne": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/CrusaderInfluenceMonsters/CrusaderArcaneRune": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AtlasExiles/EyrieInfluenceMonsters/EyrieFrostnadoDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/AvariusCasticus/AvariusCasticusStatue": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Avatar/AvatarMagmaOrbDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/BeehiveBehemoth/BeehiveBehemothSwampDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Daemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Daemon/MaligaroBladeVortexDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Daemon/SilverPoolChillDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Frog/FrogGod/SilverOrb": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Frog/FrogGod/SilverPool": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Invisible/MaligaroSoulInvisibleBladeVortex": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleAura/InvisibleWrathStationary": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleCurse/InvisibleConductivityStationary": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleCurse/InvisibleEnfeeble": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleCurse/InvisibleFrostbiteStationary": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/AfflictionBossFinalDeathZone": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/DelveVaalBossInvisibleLight": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleChaosstorm": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFireAfflictionCorpseDegen": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFireAfflictionDemonColdDegen": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFireAfflictionDemonColdDegenUnique": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFireDelveFlameTornadoSpiked": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFireDoedreSewers": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFireEyrieHurricane": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleFrostnado": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleHolyCannon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleIonCannonFrost": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleKitavaCannon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/InvisibleFire/InvisibleSandstorm_": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Labyrinth/GoddessOfJustice": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonEyes1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonEyes2": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonEyes3": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonGoatFillet1Vanish": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonGoatFillet2Vanish": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonGoatRhoa1Vanish": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonGoatRhoa2Vanish": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonPimple1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonPimple2": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonPimple3": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonSpikes": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonSpikes2": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/DoodadDaemons/DoodadDaemonSpikes3": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueAffliction/Volatile/AfflictionVolatile": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/BestiarySpiderCocoon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/BlackScorpionBestiaryBurrowTornado": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/GemFrogBestiaryClone": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/HellionBestiaryClone": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonBloodRaven1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonCorpseEruption": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonFire1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonGraspingPincers1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonParasiticSquid1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonPouncingShade1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonPouncingShadeQuickHit": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonSandLeaperExplode1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonStampede1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonVultureBomb1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ModDaemonVultureBombCast1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/ParasiticSquidBestiaryClone": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/RootSpiderBestiaryAmbush": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/SandLeaperBestiaryClone": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBestiary/SpiderPlagueBestiaryExplode": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/BetrayalBoneNovaDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/BetrayalCatarinaPillarDaemon_": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/BetrayalRikerMortarDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/BetrayalTaserNet": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/BetrayalUpgrades/BetrayalDaemonCorpseConsume": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/FortTurret/FortTurret1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/FortTurret/FortTurret1Safehouse": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueBetrayal/MasterNinjaCop": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueIncursion/VaalSaucerRoomTurret": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueIncursion/VaalSaucerTurret": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/ChaosGreenVinesDaemon_": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/ChaosSoulrendPortalDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/ColdRotatingBeamDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/ColdRotatingBeamDaemonUber": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/FireMeteorDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/GenericChargesDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/GenericEnergyShieldDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/GenericLifeDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/GenericMassiveDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/GenericSpeedDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/GoldenCoinDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/LightningPylonDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueRitual/VaalAtziriDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueSynthesis/SynthesisDroneBossTurret1": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueSynthesis/SynthesisDroneBossTurret2": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueSynthesis/SynthesisDroneBossTurret3": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueSynthesis/SynthesisDroneBossTurret4": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LeagueSynthesis/SynthesisWalkerSpawned_": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LegionLeague/LegionKaruiGeneralFish": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LegionLeague/LegionSandTornadoDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LegionLeague/LegionSergeantStampedeDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LegionLeague/LegionVaalGeneralMoveDaemonQuad": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LegionLeague/LegionVaalGeneralProjectileDaemon": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/LunarisSolaris/SolarisCelestialFormAmbushUniqueMap": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Maligaro/MaligaroDesecrate": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Monkeys/FlameBearerTalismanT2Ghost": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/Totems/TalismanTotem/TalismanTotemDeathscape": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/VaalWraith/VaalWraithChampionMinion": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/VolatileCore/VolatileCore": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/VolatileCore/VolatileDeadCore": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/traps/MonsterBlastRainTrap": {
+      "ignore": true
+    },
+    "^Metadata/Monsters/traps/MonsterFireTrap2": {
+      "ignore": true
+    },
+    "^example$": {
+      "showCastBar": true,
+      "showInBossOverlay": true,
+      "ignore": false,
+      "rulePriority": 7
+    }
+  }
+}

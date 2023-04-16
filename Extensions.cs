@@ -66,4 +66,9 @@ public static class Extensions
     {
         return color.Value with { A = (byte)(color.Value.A * alphaMultiplier) };
     }
+
+    public static string Truncate(this string text, int maxLength)
+    {
+        return text.Length <= maxLength ? text : text[..maxLength];
+    }
 }

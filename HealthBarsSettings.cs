@@ -1,6 +1,7 @@
 using ExileCore.Shared.Attributes;
 using ExileCore.Shared.Interfaces;
 using ExileCore.Shared.Nodes;
+using Newtonsoft.Json;
 using SharpDX;
 using Vector2 = System.Numerics.Vector2;
 
@@ -53,6 +54,14 @@ public class HealthBarsSettings : ISettings
     public ToggleNode ResizeBarsToFitText { get; set; } = new(true);
     public ToggleNode UseShadedTexture { get; set; } = new(true);
 
+    [JsonIgnore]
+    public ButtonNode ExportDefaultConfig { get; set; } = new ButtonNode();
+
+    public ToggleNode UseOldConfigFormat { get; set; } = new(false);
+
+    public BossOverlaySettings BossOverlaySettings { get; set; } = new();
+    public CommonCastBarSettings CommonCastBarSettings { get; set; } = new();
+
     public UnitSettings Self { get; set; } = new()
     {
         LifeColor = Extensions.FromHex(0x008000),
@@ -67,6 +76,7 @@ public class HealthBarsSettings : ISettings
         TextColor = Extensions.FromHex(0x66ff99),
         Width = { Value = 200 },
         Height = { Value = 25 },
+        IncludeInBossOverlay = { Value = true },
     };
 
     public UnitSettings RareEnemy { get; set; } = new()
@@ -133,7 +143,8 @@ public class UnitSettings
     public ColorNode HealthSegmentColor { get; set; } = Color.Black;
     public RangeNode<Vector2> TextPosition { get; set; } = new(new Vector2(0, -1), new Vector2(-1, -1), new Vector2(1, 1));
     public ToggleNode ShowDps { get; set; } = new(true);
-    public RangeNode<float> HoverOpacity { get; set; } = new RangeNode<float>(1, 0, 1);
+    public RangeNode<float> HoverOpacity { get; set; } = new(1, 0, 1);
+    public ToggleNode IncludeInBossOverlay { get; set; } = new(false);
 
     [Menu(null,
         "Text template to show next to the bar. Available variables are:\n" +
@@ -145,4 +156,46 @@ public class UnitSettings
         "Example:\n" +
         "{percent}% {current}/{total} -> 50% 5.00K/10.0K")]
     public TextNode TextFormat { get; set; } = "{percent}% {current}/{total}";
+
+    public CastBarSettings CastBarSettings { get; set; } = new();
+}
+
+[Submenu]
+public class CastBarSettings
+{
+    public ToggleNode Show { get; set; } = new(false);
+    public RangeNode<float> Height { get; set; } = new(30, 5, 150);
+    public ColorNode BackgroundColor { get; set; } = Color.Black;
+    public ColorNode FillColor { get; set; } = Color.Aqua;
+    public ColorNode DangerTextColor { get; set; } = Color.Red;
+    public ColorNode NoDangerTextColor { get; set; } = Color.Blue;
+    public ColorNode StageTextColor { get; set; } = Color.White;
+    public RangeNode<float> YOffset { get; set; } = new(0, -5, 5);
+    public ToggleNode ShowStageNames { get; set; } = new(true);
+}
+
+[Submenu(CollapsedByDefault = true)]
+public class CommonCastBarSettings
+{
+    public RangeNode<int> MaxSkillNameLength { get; set; } = new(5, 0, 30);
+    public RangeNode<int> MaxSkillNameLengthForBossOverlay { get; set; } = new(20, 0, 30);
+    public ToggleNode ShowNextStageName { get; set; } = new(true);
+    public ToggleNode ShowNextStageNameInBossOverlay { get; set; } = new(true);
+    public ToggleNode DebugShowAllSkillStages { get; set; } = new(false);
+
+    [Menu(null, "Remove part of castbar after the last \"interesting\" point unless there are none in the animation")]
+    public ToggleNode CutOffBackswing { get; set; } = new(true);
+}
+
+[Submenu(CollapsedByDefault = true)]
+public class BossOverlaySettings
+{
+    public ToggleNode Show { get; set; } = new(true);
+    public RangeNode<int> ItemSpacing { get; set; } = new(100, 0, 500);
+    public RangeNode<int> BarHeight { get; set; } = new(20, 0, 150);
+    public RangeNode<int> Width { get; set; } = new(500, 0, 1000);
+    public RangeNode<Vector2> Location { get; set; } = new(new Vector2(10, 300), Vector2.Zero, Vector2.One * 4000);
+    public ToggleNode ShowCastBarStageNames { get; set; } = new ToggleNode(false);
+    public ToggleNode ShowMonsterNames { get; set; } = new ToggleNode(true);
+    public RangeNode<int> MaxEntries { get; set; } = new(5, 0, 10);
 }

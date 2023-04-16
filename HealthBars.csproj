@@ -10,11 +10,12 @@
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
     <EmbedAllSources>true</EmbedAllSources>
   </PropertyGroup>
+
   <ItemGroup>
-    <None Remove="config\ignored_entities.txt" />
-    <Content Include="config\ignored_entities.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Remove="entityConfig.default.json" />
+    <EmbeddedResource Include="entityConfig.default.json" LogicalName="entityConfig.default.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="ExileCore">
@@ -28,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ImGui.NET" Version="1.88.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
   </ItemGroup>
