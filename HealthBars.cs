@@ -295,18 +295,25 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
             if (!healthBar.Skip)
             {
-                DrawBar(healthBar);
-                if (IsCastBarEnabled(healthBar))
+                try
                 {
-                    var lifeArea = healthBar.DisplayArea;
-                    DrawCastBar(healthBar,
-                        lifeArea with
-                        {
-                            Y = lifeArea.Y + lifeArea.Height * (healthBar.Settings.CastBarSettings.YOffset + 1),
-                            Height = healthBar.Settings.CastBarSettings.Height,
-                        }, healthBar.Settings.CastBarSettings.ShowStageNames,
-                        Settings.CommonCastBarSettings.ShowNextStageName,
-                        Settings.CommonCastBarSettings.MaxSkillNameLength);
+                    DrawBar(healthBar);
+                    if (IsCastBarEnabled(healthBar))
+                    {
+                        var lifeArea = healthBar.DisplayArea;
+                        DrawCastBar(healthBar,
+                            lifeArea with
+                            {
+                                Y = lifeArea.Y + lifeArea.Height * (healthBar.Settings.CastBarSettings.YOffset + 1),
+                                Height = healthBar.Settings.CastBarSettings.Height,
+                            }, healthBar.Settings.CastBarSettings.ShowStageNames,
+                            Settings.CommonCastBarSettings.ShowNextStageName,
+                            Settings.CommonCastBarSettings.MaxSkillNameLength);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebugWindow.LogError(ex.ToString());
                 }
             }
 
@@ -330,16 +337,23 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         var barPosition = Settings.BossOverlaySettings.Location.Value;
         foreach (var healthBar in items.Take(Settings.BossOverlaySettings.MaxEntries))
         {
-            var lifeRect = new RectangleF(barPosition.X, barPosition.Y, Settings.BossOverlaySettings.Width, Settings.BossOverlaySettings.BarHeight);
-            DrawBar(healthBar, lifeRect, false, false, Settings.BossOverlaySettings.ShowMonsterNames ? healthBar.Entity.RenderName : null);
-            barPosition.Y += lifeRect.Height;
-            if (IsCastBarEnabled(healthBar))
+            try
             {
-                DrawCastBar(healthBar, lifeRect with { Y = lifeRect.Bottom },
-                    Settings.BossOverlaySettings.ShowCastBarStageNames,
-                    Settings.CommonCastBarSettings.ShowNextStageNameInBossOverlay,
-                    Settings.CommonCastBarSettings.MaxSkillNameLengthForBossOverlay);
+                var lifeRect = new RectangleF(barPosition.X, barPosition.Y, Settings.BossOverlaySettings.Width, Settings.BossOverlaySettings.BarHeight);
+                DrawBar(healthBar, lifeRect, false, false, Settings.BossOverlaySettings.ShowMonsterNames ? healthBar.Entity.RenderName : null);
                 barPosition.Y += lifeRect.Height;
+                if (IsCastBarEnabled(healthBar))
+                {
+                    DrawCastBar(healthBar, lifeRect with { Y = lifeRect.Bottom },
+                        Settings.BossOverlaySettings.ShowCastBarStageNames,
+                        Settings.CommonCastBarSettings.ShowNextStageNameInBossOverlay,
+                        Settings.CommonCastBarSettings.MaxSkillNameLengthForBossOverlay);
+                    barPosition.Y += lifeRect.Height;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugWindow.LogError(ex.ToString());
             }
 
             barPosition.Y += Settings.BossOverlaySettings.ItemSpacing;
@@ -525,7 +539,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         var stages = ac.CurrentAnimation.AllStages.ToList();
         var settings = bar.Settings.CastBarSettings;
         var maxRawProgress = Settings.CommonCastBarSettings.CutOffBackswing
-            ? stages.LastOrDefault(x => DangerousStages.Contains(x.StageName))?.StageStart ?? ac.MaxRawAnimationProgress
+            ? stages.LastOrDefault(x => DangerousStages.Contains(x.StageNameSafe()))?.StageStart ?? ac.MaxRawAnimationProgress
             : ac.MaxRawAnimationProgress;
         if (ac.RawAnimationProgress > maxRawProgress)
         {
@@ -546,15 +560,15 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         Graphics.DrawBox(topLeft, bottomRight, settings.BackgroundColor.MultiplyAlpha(alphaMulti));
         Graphics.DrawBox(topLeft, topLeft + new Vector2(width * ac.TransformedRawAnimationProgress / maxProgress, height), settings.FillColor.MultiplyAlpha(alphaMulti));
 
-        var nextDangerousStage = stages.FirstOrDefault(x => x.StageStart > ac.RawAnimationProgress && DangerousStages.Contains(x.StageName));
+        var nextDangerousStage = stages.FirstOrDefault(x => x.StageStart > ac.RawAnimationProgress && DangerousStages.Contains(x.StageNameSafe()));
         var stageIn = nextDangerousStage != null
             ? (ac.TransformProgress(nextDangerousStage.StageStart) - ac.TransformedRawAnimationProgress) / ac.AnimationSpeed
             : ac.AnimationCompletesIn.TotalSeconds;
         var mainText = (nextDangerousStage != null && showNextStageName, maxSkillNameLength) switch
         {
-            (true, <= 0) => $"{nextDangerousStage?.StageName} in {stageIn:F1}",
+            (true, <= 0) => $"{nextDangerousStage?.StageNameSafe()} in {stageIn:F1}",
             (false, <= 0) => $"{stageIn:F1}",
-            (true, var v and > 0) => $"{actor.CurrentAction?.Skill?.Name?.Truncate(v)} {nextDangerousStage?.StageName} in {stageIn:F1}",
+            (true, var v and > 0) => $"{actor.CurrentAction?.Skill?.Name?.Truncate(v)} {nextDangerousStage?.StageNameSafe()} in {stageIn:F1}",
             (false, var v and > 0) => $"{actor.CurrentAction?.Skill?.Name?.Truncate(v)} in {stageIn:F1}",
         };
         var oldTextSize = Graphics.MeasureText(mainText);
@@ -567,7 +581,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         var occupiedSlots = new Dictionary<int, float>();
         var textLineHeight = Graphics.MeasureText("A").Y;
         var displayAllSkillStages = Settings.CommonCastBarSettings.DebugShowAllSkillStages;
-        foreach (var stage in stages.Where(x => displayAllSkillStages || DangerousStages.Contains(x.StageName)))
+        foreach (var stage in stages.Where(x => displayAllSkillStages || DangerousStages.Contains(x.StageNameSafe())))
         {
             var normalizedStageStart = ac.TransformProgress(stage.StageStart) / maxProgress;
             if (ReferenceEquals(stage, nextDangerousStage) && Math.Abs(normalizedStageStart - 1) < 1e-3)
@@ -579,7 +593,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             if (drawStageNames)
             {
                 var line = Enumerable.Range(0, 100).FirstOrDefault(x => occupiedSlots.GetValueOrDefault(x, float.NegativeInfinity) < stageX);
-                var text = displayAllSkillStages ? $"{normalizedStageStart}:{stage.StageName}" : $"{stage.StageName}";
+                var text = displayAllSkillStages ? $"{normalizedStageStart}:{stage.StageNameSafe()}" : $"{stage.StageNameSafe()}";
                 var textSize = Graphics.MeasureText(text);
                 occupiedSlots[line] = stageX + textSize.X + 20;
                 var textStart = new Vector2(stageX, topLeft.Y + height + line * textLineHeight);

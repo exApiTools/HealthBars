@@ -1,5 +1,6 @@
 using System;
 using ExileCore;
+using ExileCore.PoEMemory.Components;
 using ExileCore.Shared.Nodes;
 using SharpDX;
 
@@ -70,5 +71,18 @@ public static class Extensions
     public static string Truncate(this string text, int maxLength)
     {
         return text.Length <= maxLength ? text : text[..maxLength];
+    }
+
+    public static string StageNameSafe(this AnimationStage stage)
+    {
+        try
+        {
+            return stage.StageName;
+        }
+        catch (Exception ex)
+        {
+            DebugWindow.LogError(ex.ToString());
+            return "";
+        }
     }
 }
