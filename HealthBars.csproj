@@ -8,20 +8,23 @@
     <PlatformTarget>x64</PlatformTarget>
     <DebugType>embedded</DebugType>
     <PathMap>$(MSBuildProjectDirectory)=$(MSBuildProjectName)</PathMap>
+    <EmbedAllSources>true</EmbedAllSources>
     <OutputPath>..\..\..\..\PoeHelper\Plugins\Compiled\HealthBars\</OutputPath>
   </PropertyGroup>
+
   <ItemGroup>
-    <None Remove="config\ignored_entities.txt" />
-    <Content Include="config\ignored_entities.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Remove="entityConfig.default.json" />
+    <EmbeddedResource Include="entityConfig.default.json" LogicalName="entityConfig.default.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
   	<ProjectReference Include="..\..\..\Core\Core.csproj"/>
   	<ProjectReference Include="..\..\..\GameOffsets\GameOffsets.csproj"/>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ImGui.NET" Version="1.89.2" />
+    <PackageReference Include="ImGui.NET" Version="1.88.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
   </ItemGroup>
