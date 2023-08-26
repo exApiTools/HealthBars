@@ -51,14 +51,8 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         _windowRectangle = new TimeCache<RectangleF>(() =>
             GameController.Window.GetWindowRectangleReal() with { Location = SharpDX.Vector2.Zero }, 250);
         _ingameUiCheckVisible = new TimeCache<bool>(() =>
-            IngameUi.SyndicatePanel.IsVisibleLocal ||
-            IngameUi.SellWindow.IsVisibleLocal ||
-            IngameUi.DelveWindow.IsVisibleLocal ||
-            IngameUi.IncursionWindow.IsVisibleLocal ||
-            IngameUi.UnveilWindow.IsVisibleLocal ||
-            IngameUi.TreePanel.IsVisibleLocal ||
-            IngameUi.Atlas.IsVisibleLocal ||
-            IngameUi.CraftBench.IsVisibleLocal, 250);
+            IngameUi.FullscreenPanels.Any(x => x.IsVisibleLocal) ||
+            IngameUi.LargePanels.Any(x => x.IsVisibleLocal), 250);
         LoadConfig();
         Settings.PlayerZOffset.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
         Settings.PlacePlayerBarRelativeToGroundLevel.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
