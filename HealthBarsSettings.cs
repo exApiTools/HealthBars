@@ -122,6 +122,8 @@ public class HealthBarsSettings : ISettings
         TextFormat = { Value = "{percent}%" },
         ShowDps = { Value = false },
     };
+
+    public LegionSettings LegionSettings { get; set; } = new LegionSettings();
 }
 
 [Submenu(CollapsedByDefault = true)]
@@ -198,4 +200,12 @@ public class BossOverlaySettings
     public ToggleNode ShowCastBarStageNames { get; set; } = new ToggleNode(false);
     public ToggleNode ShowMonsterNames { get; set; } = new ToggleNode(true);
     public RangeNode<int> MaxEntries { get; set; } = new(5, 0, 10);
+}
+
+[Submenu(CollapsedByDefault = true)]
+public class LegionSettings
+{
+    public ToggleNode ShowHiddenNormalAndMagicMonsters { get; set; } = new ToggleNode(false);
+    public ToggleNode ShowHiddenRareMonsters { get; set; } = new ToggleNode(true);
+    public ToggleNode ShowHiddenUniqueMonsters { get; set; } = new ToggleNode(true);
 }
